@@ -44,5 +44,5 @@ def insert_booking(id, date, block, status, bookBy):
 
 
 # 示例数据插入
-insert_user('user1234', 'password123', 'example@example.com')
+insert_user('user1234', 'password123', 'example@example.com', token="V1an1337")
 insert_booking(1, '2024-09-24', 3, True, '20271064')
