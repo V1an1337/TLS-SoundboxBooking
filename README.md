@@ -13,7 +13,7 @@ Python库初始化：pip -r requirements.txt （若你有python2版本，使用p
 # 测试：
 1：启动insert_data_1day.py  
 2：启动server.py  
-3：启动getSoundboxState-Client.py  
+3：使用apifox进行测试 or 启动getSoundboxState-Client.py (不推荐)  
 
 # Ms-identity-python-webapp-master
 这个文件夹是Microsoft graph的登录示例，appID和Key已经包含在配置文件中，下载可以直接用  
