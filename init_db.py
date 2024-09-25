@@ -36,7 +36,7 @@ try:
         date DATE NOT NULL,
         block INT CHECK (block BETWEEN 1 AND 10),
         status BOOL NOT NULL,
-        bookBy VARCHAR(8) NOT NULL
+        bookBy VARCHAR(8) DEFAULT NULL
     )
     """)
 
