@@ -17,7 +17,7 @@ host: localhost
 
 ```pip -r requirements.txt```
 
-如果你拥有python2，使用：
+如果你拥有python2，使用：  
 ```pip3 -r requirements.txt```
 
 初始化数据库：
