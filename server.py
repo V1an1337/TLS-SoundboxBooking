@@ -33,6 +33,8 @@ def getUsernameFromToken(token: str):
     user = cursor.fetchone()
 
     if user is None:
+        cursor.close()
+        db.close()
         return 0, "", None, None
 
     username = user[0]
@@ -57,6 +59,7 @@ def getSoundboxState():
         end_date = request.args.get('endDate')
 
         if (start_date and not is_valid_date(start_date)) or (end_date and not is_valid_date(end_date)):
+            logging.info(f"/getSoundboxState Invalid date format from user {username}")
             return make_response(jsonify({"error": "Invalid date format"}), 400)
 
         if start_date and end_date:
@@ -84,6 +87,56 @@ def getSoundboxState():
         db.close()
 
 
+@app.route('/getSoundboxBookingState', methods=['GET'])
+def getSoundboxBookingState():
+    token = request.cookies.get('token')
+    if not token:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    getUsernameState, username, db, cursor = getUsernameFromToken(token)
+    if getUsernameState == 0:
+        return make_response(jsonify({"error": "Unauthorized"}), 401)
+
+    try:
+        logging.info(f"/getSoundboxBookingState {username} accessed the route.")
+
+        booking_id = request.args.get('id')
+        booking_date = request.args.get('date')
+        block = request.args.get('block')
+
+        if not (booking_id and booking_date and block):
+            logging.info(
+                f"/getSoundboxBookingState Attempt to book by {username} failed: Missing or wrong id/date/block.")
+            return make_response(jsonify({"error": "Missing or wrong id/date/block"}), 400)
+        if not (booking_id.isdigit() and block.isdigit() and is_valid_date(booking_date)):
+            logging.info(
+                f"/getSoundboxBookingState Attempt to book by {username} failed: Missing or wrong id/date/block.")
+            return make_response(jsonify({"error": "Missing or wrong id/date/block"}), 400)
+
+        cursor.execute("SELECT * FROM Booking WHERE id = %s AND date = %s AND block = %s",
+                       (booking_id, booking_date, block))
+        booking = cursor.fetchone()
+
+        if not booking:
+            logging.info(f"/getSoundboxBookingState Attempt to getSoundbox by {username} failed: Soundbox not found.")
+            return make_response(jsonify({"error": "Soundbox not found"}), 404)
+
+        booking_status, booking_by = booking[3], booking[4]  # 假设 status 在 Booking 表中的位置为 3
+        formatted_results = [booking_status, booking_by]
+
+        # 记录返回结果
+        logging.info(f"/getSoundboxBookingState Retrieved results from user {username}: {formatted_results}")
+        return jsonify(formatted_results)
+
+    except Exception as e:
+        logging.error(f"/getSoundboxBookingState An error occurred: {e}")
+        return make_response(jsonify({"error": "Internal Server Error"}), 500)
+
+    finally:
+        cursor.close()
+        db.close()
+
+
 @app.route('/book', methods=['POST'])
 def book():
     token = request.cookies.get('token')
@@ -104,8 +157,10 @@ def book():
         block = request.args.get('block')
 
         if not (booking_id and booking_date and block):
+            logging.info(f"/book Attempt to book by {username} failed: Missing or wrong id/date/block.")
             return make_response(jsonify({"error": "Missing or wrong id/date/block"}), 400)
         if not (booking_id.isdigit() and block.isdigit() and is_valid_date(booking_date)):
+            logging.info(f"/book Attempt to book by {username} failed: Missing or wrong id/date/block.")
             return make_response(jsonify({"error": "Missing or wrong id/date/block"}), 400)
 
         cursor.execute("SELECT * FROM Booking WHERE id = %s AND date = %s AND block = %s",
@@ -113,7 +168,8 @@ def book():
         booking = cursor.fetchone()
 
         if not booking:
-            return make_response(jsonify({"error": "soundbox not found"}), 404)
+            logging.info(f"/book Attempt to book by {username} failed: Soundbox not found.")
+            return make_response(jsonify({"error": "Soundbox not found"}), 404)
 
         booking_status = booking[3]  # 假设 status 在 Booking 表中的位置为 3
 
@@ -127,6 +183,63 @@ def book():
         db.commit()
 
         logging.info(f"/book Booking {booking_id} at block {block} in {booking_date} successful by {username}.")
+        return jsonify({"status": True}), 200
+
+    except Exception as e:
+        logging.error(f"/book An error occurred: {e}")
+        return make_response(jsonify({"error": "Internal Server Error"}), 500)
+
+    finally:
+        cursor.close()
+        db.close()
+
+
+@app.route('/unbook', methods=['POST'])
+def unbook():
+    token = request.cookies.get('token')
+    if not token:
+        return make_response(jsonify({"error": "Unauthorized"}), 401)
+
+    getUsernameState, username, db, cursor = getUsernameFromToken(token)
+    if getUsernameState == 0:
+        return make_response(jsonify({"error": "Unauthorized"}), 401)
+
+    try:
+
+        logging.info(f"/unbook {username} accessed the route.")
+
+        # 获取Query参数并验证
+        booking_id = request.args.get('id')
+        booking_date = request.args.get('date')
+        block = request.args.get('block')
+
+        if not (booking_id and booking_date and block):
+            logging.info(f"/book Attempt to book by {username} failed: Missing or wrong id/date/block.")
+            return make_response(jsonify({"error": "Missing or wrong id/date/block"}), 400)
+        if not (booking_id.isdigit() and block.isdigit() and is_valid_date(booking_date)):
+            logging.info(f"/book Attempt to book by {username} failed: Missing or wrong id/date/block.")
+            return make_response(jsonify({"error": "Missing or wrong id/date/block"}), 400)
+
+        cursor.execute("SELECT * FROM Booking WHERE id = %s AND date = %s AND block = %s",
+                       (booking_id, booking_date, block))
+        booking = cursor.fetchone()
+
+        if not booking:
+            logging.info(f"/book Attempt to book by {username} failed: Soundbox not found.")
+            return make_response(jsonify({"error": "Soundbox not found"}), 404)
+
+        booking_status, booking_by = booking[3], booking[4]  # 假设 status 在 Booking 表中的位置为 3
+
+        if not (booking_status and booking_by == username):  # 不是被当前用户预定
+            logging.info(f"/unbook Attempt to unbook by {username} failed: Not booked or booked by the current user.")
+            return make_response(jsonify({"error": "Not booked or booked by the current user"}), 400)
+
+        # 更新 status 和 bookBy
+        cursor.execute("UPDATE Booking SET bookBy = %s, status = false WHERE id = %s AND date = %s AND block = %s",
+                       (None, booking_id, booking_date, block))
+        db.commit()
+
+        logging.info(f"/unbook Unbooking {booking_id} at block {block} in {booking_date} successful by {username}.")
         return jsonify({"status": True}), 200
 
     except Exception as e:
