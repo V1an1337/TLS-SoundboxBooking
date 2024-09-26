@@ -36,7 +36,8 @@ python insert_data_1day.py
 python server.py
 ```
 
-接着使用apifox进行测试或者启动getSoundboxState-Client.py (不推荐)
+接着使用apifox进行测试（十分推荐！！！）  
+或者启动getSoundboxState-Client.py (不推荐)
 
 ```
 python getSoundboxState-Client.py
