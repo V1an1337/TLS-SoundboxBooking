@@ -1,9 +1,9 @@
 # SoundboxBooking
 
-TLS Soundbox Booking Project
+This repository refers to TLS Soundbox Booking Project
 
 # MySQL配置
-
+ 
 ```
 username: soundbox
 password: V1an1337
