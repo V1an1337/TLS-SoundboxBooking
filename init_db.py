@@ -23,9 +23,8 @@ try:
     CREATE TABLE IF NOT EXISTS User (
         id INT AUTO_INCREMENT PRIMARY KEY,
         username VARCHAR(8) NOT NULL,
-        password VARCHAR(32) NOT NULL,
-        mailAddress VARCHAR(255) NOT NULL,
-        token VARCHAR(256) DEFAULT NULL
+        token VARCHAR(128) DEFAULT NULL,
+        mailAddress VARCHAR(64) NOT NULL
     )
     """)
 
@@ -34,7 +33,7 @@ try:
     CREATE TABLE IF NOT EXISTS Booking (
         id INT NOT NULL,
         date DATE NOT NULL,
-        block INT CHECK (block BETWEEN 1 AND 10),
+        block INT NOT NULL,
         status BOOL NOT NULL,
         bookBy VARCHAR(8) DEFAULT NULL
     )
