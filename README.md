@@ -2,42 +2,42 @@
 
 This repository refers to TLS Soundbox Booking Project
 
-# MySQL配置
- 
+# MySQL Configuration
+
+Create user "soundbox" with corresponding password:
 ```
 username: soundbox
 password: V1an1337
 host: localhost
 ```
 
-# SoundboxBooking-Main
+# Run SoundboxBooking
 
-安装Python库：
+Install python libraries：
 
 
 ```pip -r requirements.txt```
 
-如果你拥有python2，使用：  
+If you already installed python2, use：  
 ```pip3 -r requirements.txt```
 
-初始化数据库：
+Initialise the database：
 
 ```
 python init_db.py
 python insert_data.py
 ```
 
-# 测试：
+# Test：
 
-添加测试数据以及启动服务器
-
+Add test data and run the server:
 ```
 python insert_data_1day.py
 python server.py
 ```
 
-接着使用apifox进行测试（十分推荐！！！）  
-或者启动getSoundboxState-Client.py (不推荐)
+Use apifox to test different api（十分推荐！！！）  
+or run getSoundboxState-Client.py (不推荐)
 
 ```
 python getSoundboxState-Client.py
