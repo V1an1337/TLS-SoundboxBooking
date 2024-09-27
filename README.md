@@ -40,8 +40,7 @@ Use apifox to test APIs
 
 # Ms-identity-python-webapp-master
 
-这个文件夹是Microsoft graph的登录示例，appID和Key已经包含在配置文件中，下载可以直接用。requirements.txt在文件夹里面有一个单独的，记得pip
-
+这个文件夹是一个单独的Microsoft graph登录示例，appID和Key已经包含在配置文件中，下载可以直接用。  
 启动服务器
 
 ```
