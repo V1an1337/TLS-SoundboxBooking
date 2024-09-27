@@ -36,12 +36,7 @@ python insert_data_1day.py
 python server.py
 ```
 
-Use apifox to test different api（十分推荐！！！）  
-or run getSoundboxState-Client.py (不推荐)
-
-```
-python getSoundboxState-Client.py
-```
+Use apifox to test APIs
 
 # Ms-identity-python-webapp-master
 
