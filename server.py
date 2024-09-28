@@ -201,8 +201,8 @@ def getSoundboxState():
         db.close()
 
 
-@app.route('/getSoundboxBookingState', methods=['GET'])
-def getSoundboxBookingState():
+@app.route('/getSoundboxBookBy', methods=['GET'])
+def getSoundboxBookBy():
     token = request.cookies.get('token')
     if not token:
         return jsonify({"error": "Unauthorized"}), 401
@@ -212,7 +212,7 @@ def getSoundboxBookingState():
         return make_response(jsonify({"error": "Unauthorized"}), 401)
 
     try:
-        logging.info(f"/getSoundboxBookingState {username} accessed the route.")
+        logging.info(f"/getSoundboxBookBy {username} accessed the route.")
 
         booking_id = request.args.get('id')
         booking_date = request.args.get('date')
@@ -220,11 +220,11 @@ def getSoundboxBookingState():
 
         if not (booking_id and booking_date and block):
             logging.info(
-                f"/getSoundboxBookingState Attempt to book by {username} failed: Missing or wrong id/date/block.")
+                f"/getSoundboxBookBy Attempt to getSoundbox by {username} failed: Missing or wrong id/date/block.")
             return make_response(jsonify({"error": "Missing or wrong id/date/block"}), 400)
         if not (booking_id.isdigit() and block.isdigit() and is_valid_date(booking_date)):
             logging.info(
-                f"/getSoundboxBookingState Attempt to book by {username} failed: Missing or wrong id/date/block.")
+                f"/getSoundboxBookBy Attempt to getSoundbox by {username} failed: Missing or wrong id/date/block.")
             return make_response(jsonify({"error": "Missing or wrong id/date/block"}), 400)
 
         cursor.execute("SELECT * FROM Booking WHERE id = %s AND date = %s AND block = %s",
@@ -232,18 +232,18 @@ def getSoundboxBookingState():
         booking = cursor.fetchone()
 
         if not booking:
-            logging.info(f"/getSoundboxBookingState Attempt to getSoundbox by {username} failed: Soundbox not found.")
+            logging.info(f"/getSoundboxBookBy Attempt to getSoundbox by {username} failed: Soundbox not found.")
             return make_response(jsonify({"error": "Soundbox not found"}), 404)
 
         booking_status, booking_by = booking[3], booking[4]  # 假设 status 在 Booking 表中的位置为 3
         formatted_results = [booking_status, booking_by]
 
         # 记录返回结果
-        logging.info(f"/getSoundboxBookingState Retrieved results from user {username}: {formatted_results}")
+        logging.info(f"/getSoundboxBookBy Retrieved results from user {username}: {formatted_results}")
         return jsonify(formatted_results)
 
     except Exception as e:
-        logging.error(f"/getSoundboxBookingState An error occurred: {e}")
+        logging.error(f"/getSoundboxBookBy An error occurred: {e}")
         return make_response(jsonify({"error": "Internal Server Error"}), 500)
 
     finally:
