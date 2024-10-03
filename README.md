@@ -25,14 +25,12 @@ Initialise the database：
 
 ```
 python init_db.py
-python insert_data.py
 ```
 
 # Test：
 
-Add test data and run the server:
+Add test data and run the server (It will automatically add data of future weekdays):
 ```
-python insert_data_1day.py
 python server.py
 ```
 
