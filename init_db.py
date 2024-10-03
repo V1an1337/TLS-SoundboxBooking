@@ -1,6 +1,5 @@
 import mysql.connector
 from mysql.connector import errorcode
-import hashlib
 
 # MySQL连接配置
 config = {
@@ -18,9 +17,10 @@ try:
     cursor.execute("CREATE DATABASE IF NOT EXISTS SoundboxBooking")
     cursor.execute("USE SoundboxBooking")
 
-    # 创建User表
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS User (
+    # 删除User表（如果存在），然后创建User表
+    cursor.execute("DROP TABLE IF EXISTS User")
+    cursor.execute(""" 
+    CREATE TABLE User (
         id INT AUTO_INCREMENT PRIMARY KEY,
         username VARCHAR(8) NOT NULL,
         token VARCHAR(128) DEFAULT NULL,
@@ -28,14 +28,16 @@ try:
     )
     """)
 
-    # 创建Booking表
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS Booking (
+    # 删除Booking表（如果存在），然后创建Booking表
+    cursor.execute("DROP TABLE IF EXISTS Booking")
+    cursor.execute(""" 
+    CREATE TABLE Booking (
         id INT NOT NULL,
         date DATE NOT NULL,
         block INT NOT NULL,
         status BOOL NOT NULL,
-        bookBy VARCHAR(8) DEFAULT NULL
+        bookBy VARCHAR(8) DEFAULT NULL,
+        UNIQUE (id, date, block)  -- 设置 (id, date, block) 组合为唯一
     )
     """)
 
