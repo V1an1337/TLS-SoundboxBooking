@@ -8,6 +8,7 @@ from datetime import datetime
 import re
 from flask_session import Session
 import app_config
+from insert_data import InsertData
 
 # 设置日志配置
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename="server.log")
@@ -16,7 +17,7 @@ app = Flask(__name__)
 app.config.from_object(app_config)
 Session(app)
 
-from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.middleware.proxy_fix import ProxyFix  # Microsoft登录示例里的依赖
 
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
@@ -35,6 +36,9 @@ config = {
     'database': 'SoundboxBooking',
 }
 connection_pool = pooling.MySQLConnectionPool(pool_name="mypool", pool_size=5, **config)
+
+insert_data = InsertData()  # 启动自动插入/删除程序
+insert_data.start()
 
 
 def is_valid_date(date_str):
@@ -71,7 +75,7 @@ def login():
             redirect_uri=url_for("auth_response", _external=True),
         ))
 
-    getUsernameState, username, db, cursor = getUsernameFromToken(token, autoClose=True) # 不需要手动cursor.close,db.close
+    getUsernameState, username, db, cursor = getUsernameFromToken(token, autoClose=True)  # 不需要手动cursor.close,db.close
     if getUsernameState == 0:  # token不匹配
         return render_template("login.html", version=identity.__version__, **auth.log_in(
             scopes=app_config.SCOPE,  # Have user consent to scopes during log-in
@@ -366,4 +370,4 @@ def unbook():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
