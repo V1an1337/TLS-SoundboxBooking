@@ -37,9 +37,9 @@ config = {
 }
 connection_pool = pooling.MySQLConnectionPool(pool_name="mypool", pool_size=5, **config)
 
-insert_data = InsertData()  # 启动自动插入/删除程序
+insert_data = InsertData()
+insert_data.init()
 insert_data.start()
-
 
 def is_valid_date(date_str):
     """ 验证日期格式 YYYY-MM-DD """
