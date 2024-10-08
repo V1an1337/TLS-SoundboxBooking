@@ -2,6 +2,7 @@ import logging
 import identity
 import identity.web
 from flask import Flask, redirect, render_template, request, session, url_for, jsonify, make_response
+from flask_cors import CORS
 import requests
 from mysql.connector import pooling
 from datetime import datetime
@@ -15,6 +16,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 app = Flask(__name__)
 app.config.from_object(app_config)
+CORS(app)
 Session(app)
 
 from werkzeug.middleware.proxy_fix import ProxyFix  # Microsoft登录示例里的依赖
@@ -370,4 +372,9 @@ def unbook():
 
 
 if __name__ == '__main__':
-    app.run()
+    if input("Enable HTTPS? (Y/N)") == "Y":
+        logging.info("Server run as HTTPS")
+        app.run(ssl_context=('fullchain.pem', 'privkey.key'))
+    else:
+        logging.info("Server run as HTTP")
+        app.run()
