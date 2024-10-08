@@ -1,4 +1,4 @@
-![image](https://github.com/user-attachments/assets/1ee99bae-b59b-4b96-ad01-ba5423040692)# SoundboxBooking
+# SoundboxBooking
 
 This repository refers to TLS Soundbox Booking Project
 
