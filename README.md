@@ -1,4 +1,4 @@
-# SoundboxBooking
+![image](https://github.com/user-attachments/assets/1ee99bae-b59b-4b96-ad01-ba5423040692)# SoundboxBooking
 
 This repository refers to TLS Soundbox Booking Project
 
@@ -33,10 +33,12 @@ Add test data and run the server (It will automatically add data of future weekd
 ```
 python server.py
 ```
-When the program ask you to choose HTTP/HTTPS, choose as you like.  
-However, if you want to enable HTTPS, please change fullchain.pem and privkey.key to your own certificate.  
+Deploy on localhost:  
+Enter "N" when the program ask you to choose HTTP/HTTPS  
+Deploy on server:  
+Enter "Y" to enable HTTPS and change fullchain.pem & privkey.key into your own website certificate  
 
-Use apifox to test APIs
+Then use apifox to test APIs
 
 # Ms-identity-python-webapp-master
 
