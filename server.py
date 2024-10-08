@@ -195,7 +195,7 @@ def getSoundboxState():
         formatted_results = [(id, str(date), block, status) for (id, date, block, status) in results]
 
         # 记录返回结果
-        logging.info(f"/getSoundboxState Retrieved results from user {username}: {formatted_results}")
+        logging.info(f"/getSoundboxState Retrieved results from user {username}")
         return jsonify(formatted_results)
 
     except Exception as e:
@@ -245,7 +245,7 @@ def getSoundboxBookBy():
         formatted_results = [booking_status, booking_by]
 
         # 记录返回结果
-        logging.info(f"/getSoundboxBookBy Retrieved results from user {username}: {formatted_results}")
+        logging.info(f"/getSoundboxBookBy Retrieved results from user {username}: {formatted_results} from original data {booking}")
         return jsonify(formatted_results)
 
     except Exception as e:
