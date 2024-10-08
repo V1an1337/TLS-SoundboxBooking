@@ -33,6 +33,8 @@ Add test data and run the server (It will automatically add data of future weekd
 ```
 python server.py
 ```
+When the program ask you to choose HTTP/HTTPS, choose as you like.  
+However, if you want to enable HTTPS, please change fullchain.pem and privkey.key to your own certificate.  
 
 Use apifox to test APIs
 
