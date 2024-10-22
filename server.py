@@ -43,6 +43,7 @@ insert_data = InsertData()
 insert_data.init()
 insert_data.start()
 
+
 def is_valid_date(date_str):
     """ 验证日期格式 YYYY-MM-DD """
     return bool(re.match(r"^\d{4}\d{2}\d{2}$", date_str))
@@ -70,7 +71,7 @@ def getUsernameFromToken(token: str, autoClose=False):
 
 @app.route("/login")
 def login():
-    token = request.cookies.get('token')
+    token = request.args.get('token')
     if not token:  # token为空
         return render_template("login.html", version=identity.__version__, **auth.log_in(
             scopes=app_config.SCOPE,  # Have user consent to scopes during log-in
@@ -152,20 +153,24 @@ def logout():
 
 @app.route("/")
 def index():
+    return render_template("soundboxBooking.html")
+
+
+"""    
     if not (app.config["CLIENT_ID"] and app.config["CLIENT_SECRET"]):
         # This check is not strictly necessary.
         # You can remove this check from your production code.
         return render_template('config_error.html')
     if not auth.get_user():
         return redirect(url_for("login"))
-    return render_template('index.html', user=auth.get_user(), version=identity.__version__)
+    return render_template('index.html', user=auth.get_user(), version=identity.__version__)"""
 
 
 @app.route('/getSoundboxState', methods=['GET'])
 def getSoundboxState():
-    token = request.cookies.get('token')
+    token = request.args.get('token')
     if not token:
-        return jsonify({"error": "Unauthorized"}), 401
+        return jsonify({"error": "no token"}), 401
 
     getUsernameState, username, db, cursor = getUsernameFromToken(token)
     if getUsernameState == 0:
@@ -175,24 +180,23 @@ def getSoundboxState():
         logging.info(f"/getSoundboxState {username} accessed the route.")
 
         # 获取Query参数并验证
-        start_date = request.args.get('startDate')
-        end_date = request.args.get('endDate')
+        date = request.args.get('date')
 
-        if (start_date and not is_valid_date(start_date)) or (end_date and not is_valid_date(end_date)):
+        if date and not is_valid_date(date):
             logging.info(f"/getSoundboxState Invalid date format from user {username}")
             return make_response(jsonify({"error": "Invalid date format"}), 400)
 
-        if start_date and end_date:
+        if date:
             cursor.execute(
-                "SELECT id, DATE_FORMAT(date, '%Y%m%d'), block, status FROM Booking WHERE date BETWEEN %s AND %s",
-                (start_date, end_date))
+                "SELECT id, block FROM Booking WHERE date = %s AND status = 1",
+                (date,))
         else:
             today = datetime.now().date()
-            cursor.execute("SELECT id, DATE_FORMAT(date, '%Y%m%d'), block, status FROM Booking WHERE date = %s",
+            cursor.execute("SELECT id, block FROM Booking WHERE date = %s AND status = 1",
                            (today,))
 
         results = cursor.fetchall()
-        formatted_results = [(id, str(date), block, status) for (id, date, block, status) in results]
+        formatted_results = [(id, block) for (id, block) in results]
 
         # 记录返回结果
         logging.info(f"/getSoundboxState Retrieved results from user {username}")
@@ -209,9 +213,9 @@ def getSoundboxState():
 
 @app.route('/getSoundboxBookBy', methods=['GET'])
 def getSoundboxBookBy():
-    token = request.cookies.get('token')
+    token = request.headers.get('token')
     if not token:
-        return jsonify({"error": "Unauthorized"}), 401
+        return jsonify({"error": "no token"}), 401
 
     getUsernameState, username, db, cursor = getUsernameFromToken(token)
     if getUsernameState == 0:
@@ -235,6 +239,7 @@ def getSoundboxBookBy():
 
         cursor.execute("SELECT * FROM Booking WHERE id = %s AND date = %s AND block = %s",
                        (booking_id, booking_date, block))
+
         booking = cursor.fetchone()
 
         if not booking:
@@ -245,7 +250,8 @@ def getSoundboxBookBy():
         formatted_results = [booking_status, booking_by]
 
         # 记录返回结果
-        logging.info(f"/getSoundboxBookBy Retrieved results from user {username}: {formatted_results} from original data {booking}")
+        logging.info(
+            f"/getSoundboxBookBy Retrieved results from user {username}: {formatted_results} from original data {booking}")
         return jsonify(formatted_results)
 
     except Exception as e:
@@ -259,9 +265,9 @@ def getSoundboxBookBy():
 
 @app.route('/book', methods=['POST'])
 def book():
-    token = request.cookies.get('token')
+    token = request.args.get('token')
     if not token:
-        return make_response(jsonify({"error": "Unauthorized"}), 401)
+        return make_response(jsonify({"error": "no token"}), 401)
 
     getUsernameState, username, db, cursor = getUsernameFromToken(token)
     if getUsernameState == 0:
@@ -316,7 +322,7 @@ def book():
 
 @app.route('/unbook', methods=['POST'])
 def unbook():
-    token = request.cookies.get('token')
+    token = request.args.get('token')
     if not token:
         return make_response(jsonify({"error": "Unauthorized"}), 401)
 
