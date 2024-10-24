@@ -5,6 +5,7 @@ This repository refers to TLS Soundbox Booking Project
 # MySQL Configuration
 
 Create user "soundbox" with corresponding password:
+
 ```
 username: soundbox
 password: V1an1337
@@ -14,7 +15,6 @@ host: localhost
 # Run SoundboxBooking
 
 Install python libraries：
-
 
 ```pip -r requirements.txt```
 
@@ -30,13 +30,15 @@ python init_db.py
 # Test：
 
 Add test data and run the server (It will automatically add data of future weekdays):
+
 ```
 python server.py
 ```
+
 Deploy on localhost:  
-Enter "N" when the program ask you to choose HTTP/HTTPS  
+Enter `N` when the program ask you to choose HTTP/HTTPS  
 Deploy on server:  
-Enter "Y" to enable HTTPS and change fullchain.pem & privkey.key into your own website certificate  
+Enter `Y` to enable HTTPS and change fullchain.pem & privkey.key into your own website certificate  
 
 Then use apifox to test APIs
 
