@@ -262,6 +262,37 @@ def getSoundboxBookBy():
         cursor.close()
         db.close()
 
+@app.route('/getBookedSoundbox', methods=['GET'])
+def getBookedSoundbox():
+    token = request.headers.get('token')
+    if not token:
+        return jsonify({"error": "no token"}), 401
+
+    getUsernameState, username, db, cursor = getUsernameFromToken(token)
+    if getUsernameState == 0:
+        return make_response(jsonify({"error": "Unauthorized"}), 401)
+
+    try:
+        logging.info(f"/getBookedSoundbox {username} accessed the route.")
+        cursor.execute("SELECT id,date,block FROM Booking WHERE bookBy = %s", (username,))
+        results = cursor.fetchall()
+
+        formatted_results = [(id, date.strftime('%Y%m%d'), block) for (id, date, block) in results]
+
+        # 记录返回结果
+        logging.info(
+            f"/getBookedSoundbox Retrieved results from user {username}: {formatted_results} from original data {results}")
+        return jsonify(formatted_results)
+
+    except Exception as e:
+        logging.error(f"/getBookedSoundbox An error occurred: {e}")
+        return make_response(jsonify({"error": "Internal Server Error"}), 500)
+
+    finally:
+        cursor.close()
+        db.close()
+
+
 
 @app.route('/book', methods=['POST'])
 def book():
