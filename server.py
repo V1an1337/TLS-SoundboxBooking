@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 app = Flask(__name__)
 app.config.from_object(app_config)
-CORS(app)
+CORS(app, resources={r'/*': {'origins': ["http://localhost:63342", "https://cloud.v1an.xyz"], "methods": "*"}}, supports_credentials=True)
 Session(app)
 
 from werkzeug.middleware.proxy_fix import ProxyFix  # Microsoft登录示例里的依赖
@@ -71,7 +71,7 @@ def getUsernameFromToken(token: str, autoClose=False):
 
 @app.route("/login")
 def login():
-    token = request.args.get('token')
+    token = request.cookies.get('token')  # 从 cookie 中获取 token
     if not token:  # token为空
         return render_template("login.html", version=identity.__version__, **auth.log_in(
             scopes=app_config.SCOPE,  # Have user consent to scopes during log-in
@@ -85,7 +85,13 @@ def login():
             redirect_uri=url_for("auth_response", _external=True),
         ))
 
-    return jsonify({"status": True}), 200  # token匹配
+    response = jsonify({"status": True})  # token匹配
+    response.status_code = 200
+
+    # 设置 cookie
+    response.set_cookie('token', token, httponly=True, secure=True)  # 确保 cookie 仅在 HTTPS 传输
+    return response
+
 
 
 @app.route(app_config.REDIRECT_PATH)
@@ -128,22 +134,27 @@ def auth_response():
         user = cursor.fetchone()
 
         if user is None:  # 新用户注册
-            logging.info(f"/getAToken-UpdateUser/Token user {username} with main {mailAddress} registered!")
+            logging.info(f"/getAToken-UpdateUser/Token user {username} with mail {mailAddress} registered!")
             insert_query = "INSERT INTO User (username, mailAddress, token) VALUES (%s, %s, %s)"
             cursor.execute(insert_query, (username, mailAddress, new_token))
         else:  # 更新token
             logging.info(f"/getAToken-UpdateUser/Token user {username} renewed token!")
-            cursor.execute("UPDATE User SET token = %s WHERE mailAddress = %s",
-                           (new_token, mailAddress))
+            cursor.execute("UPDATE User SET token = %s WHERE mailAddress = %s", (new_token, mailAddress))
 
         db.commit()
-        return jsonify({"status": True, "token": new_token}), 200
+
+        # 设置cookie以便用户下次自动认证
+        response = jsonify({"status": True, "token": new_token})
+        response.set_cookie('token', new_token, httponly=True, secure=True)  # 使用secure和httponly选项确保cookie安全
+        return response, 200
+
     except Exception as e:
         logging.error(f"/getAToken-UpdateUser/Token An error occurred: {e}")
         return make_response(jsonify({"error": "Internal Server Error"}), 500)
     finally:
         cursor.close()
         db.close()
+
 
 
 @app.route("/logout")
@@ -168,7 +179,8 @@ def index():
 
 @app.route('/getSoundboxState', methods=['GET'])
 def getSoundboxState():
-    token = request.args.get('token')
+    token = request.cookies.get('token')
+    print(f"token= {token}")
     if not token:
         return jsonify({"error": "no token"}), 401
 
@@ -213,7 +225,7 @@ def getSoundboxState():
 
 @app.route('/getSoundboxBookBy', methods=['GET'])
 def getSoundboxBookBy():
-    token = request.headers.get('token')
+    token = request.cookies.get('token')
     if not token:
         return jsonify({"error": "no token"}), 401
 
@@ -264,7 +276,7 @@ def getSoundboxBookBy():
 
 @app.route('/getBookedSoundbox', methods=['GET'])
 def getBookedSoundbox():
-    token = request.headers.get('token')
+    token = request.cookies.get('token')
     if not token:
         return jsonify({"error": "no token"}), 401
 
@@ -296,7 +308,7 @@ def getBookedSoundbox():
 
 @app.route('/book', methods=['POST'])
 def book():
-    token = request.args.get('token')
+    token = request.cookies.get('token')
     if not token:
         return make_response(jsonify({"error": "no token"}), 401)
 
@@ -353,7 +365,7 @@ def book():
 
 @app.route('/unbook', methods=['POST'])
 def unbook():
-    token = request.args.get('token')
+    token = request.cookies.get('token')
     if not token:
         return make_response(jsonify({"error": "Unauthorized"}), 401)
 
