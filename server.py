@@ -200,7 +200,7 @@ def get_soundbox_state():
         formatted_results = [(id, block) for (id, block) in results]
 
         # 记录返回结果
-        logging.info(f"/getSoundboxState Retrieved results from user {username}")
+        logging.info(f"/getSoundboxState Retrieved results from user {username}: {formatted_results}")
         return jsonify(formatted_results)
 
     except Exception as e:
