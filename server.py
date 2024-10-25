@@ -70,7 +70,7 @@ def get_username_from_token(token: str):
 
 @app.route("/login")
 def login():
-    token = request.cookies.get('token')  # 从 cookie 中获取 token
+    token = request.headers.get('token')  # 从 cookie 中获取 token
     if not token:  # token为空
         return render_template("login.html", version=identity.__version__, **auth.log_in(
             scopes=app_config.SCOPE,  # Have user consent to scopes during log-in
@@ -169,7 +169,7 @@ def index():
 
 @app.route('/getSoundboxState', methods=['GET'])
 def get_soundbox_state():
-    token = request.cookies.get('token')
+    token = request.headers.get('token')
     if not token:
         return jsonify({"error": "no token"}), 401
 
@@ -211,7 +211,7 @@ def get_soundbox_state():
 
 @app.route('/getSoundboxBookBy', methods=['GET'])
 def get_soundbox_book_by():
-    token = request.cookies.get('token')
+    token = request.headers.get('token')
     if not token:
         return jsonify({"error": "no token"}), 401
 
@@ -260,7 +260,7 @@ def get_soundbox_book_by():
 
 @app.route('/getBookedSoundbox', methods=['GET'])
 def get_booked_soundbox():
-    token = request.cookies.get('token')
+    token = request.headers.get('token')
     if not token:
         return jsonify({"error": "no token"}), 401
 
@@ -288,7 +288,7 @@ def get_booked_soundbox():
 
 @app.route('/book', methods=['POST'])
 def book():
-    token = request.cookies.get('token')
+    token = request.headers.get('token')
     if not token:
         return make_response(jsonify({"error": "no token"}), 401)
 
@@ -341,7 +341,7 @@ def book():
 
 @app.route('/unbook', methods=['POST'])
 def unbook():
-    token = request.cookies.get('token')
+    token = request.headers.get('token')
     if not token:
         return make_response(jsonify({"error": "Unauthorized"}), 401)
 
