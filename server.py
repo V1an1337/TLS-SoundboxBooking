@@ -43,31 +43,30 @@ insert_data = InsertData()
 insert_data.init()
 insert_data.start()
 
-
 def is_valid_date(date_str):
     """ 验证日期格式 YYYY-MM-DD """
     return bool(re.match(r"^\d{4}\d{2}\d{2}$", date_str))
 
-
-def getUsernameFromToken(token: str, autoClose=False):
-    # 验证token并获取用户名
+def get_db_cursor():
     db = connection_pool.get_connection()
     cursor = db.cursor()
-    cursor.execute("SELECT username FROM User WHERE token = %s", (token,))
-    user = cursor.fetchone()
+    return db, cursor
 
-    if user is None:
-        cursor.close()
-        db.close()
-        return 0, "", None, None
+def close_db_connection(db, cursor):
+    cursor.close()
+    db.close()
 
-    username = user[0]
-    if autoClose:
-        cursor.close()
-        db.close()
-
-    return 1, username, db, cursor
-
+def get_username_from_token(token: str):
+    db, cursor = get_db_cursor()
+    try:
+        cursor.execute("SELECT username FROM User WHERE token = %s", (token,))
+        user = cursor.fetchone()
+        if user is None:
+            return 0, "", None, None
+        return 1, user[0], db, cursor
+    except Exception as e:
+        logging.error(f"Error fetching username from token: {e}")
+        return 0, "", db, cursor
 
 @app.route("/login")
 def login():
@@ -78,7 +77,7 @@ def login():
             redirect_uri=url_for("auth_response", _external=True),
         ))
 
-    getUsernameState, username, db, cursor = getUsernameFromToken(token, autoClose=True)  # 不需要手动cursor.close,db.close
+    getUsernameState, username, db, cursor = get_username_from_token(token)
     if getUsernameState == 0:  # token不匹配
         return render_template("login.html", version=identity.__version__, **auth.log_in(
             scopes=app_config.SCOPE,  # Have user consent to scopes during log-in
@@ -91,8 +90,6 @@ def login():
     # 设置 cookie
     response.set_cookie('token', token, httponly=True, secure=True)  # 确保 cookie 仅在 HTTPS 传输
     return response
-
-
 
 @app.route(app_config.REDIRECT_PATH)
 def auth_response():
@@ -127,8 +124,7 @@ def auth_response():
         logging.error(f"/getAToken-getAPI An error occurred: {e}")
         return make_response(jsonify({"error": "Internal Server Error"}), 500)
 
-    db = connection_pool.get_connection()
-    cursor = db.cursor()
+    db, cursor = get_db_cursor()
     try:
         cursor.execute("SELECT username FROM User WHERE mailAddress = %s", (mailAddress,))
         user = cursor.fetchone()
@@ -152,39 +148,32 @@ def auth_response():
         logging.error(f"/getAToken-UpdateUser/Token An error occurred: {e}")
         return make_response(jsonify({"error": "Internal Server Error"}), 500)
     finally:
-        cursor.close()
-        db.close()
-
-
+        close_db_connection(db, cursor)
 
 @app.route("/logout")
 def logout():
     return redirect(auth.log_out(url_for("index", _external=True)))
 
-
 @app.route("/")
 def index():
     return render_template("soundboxBooking.html")
-
-
-"""    
+    """    
     if not (app.config["CLIENT_ID"] and app.config["CLIENT_SECRET"]):
         # This check is not strictly necessary.
         # You can remove this check from your production code.
         return render_template('config_error.html')
     if not auth.get_user():
         return redirect(url_for("login"))
-    return render_template('index.html', user=auth.get_user(), version=identity.__version__)"""
-
+    return render_template('index.html', user=auth.get_user(), version=identity.__version__)
+    """
 
 @app.route('/getSoundboxState', methods=['GET'])
-def getSoundboxState():
+def get_soundbox_state():
     token = request.cookies.get('token')
-    print(f"token= {token}")
     if not token:
         return jsonify({"error": "no token"}), 401
 
-    getUsernameState, username, db, cursor = getUsernameFromToken(token)
+    getUsernameState, username, db, cursor = get_username_from_token(token)
     if getUsernameState == 0:
         return make_response(jsonify({"error": "Unauthorized"}), 401)
 
@@ -217,19 +206,16 @@ def getSoundboxState():
     except Exception as e:
         logging.error(f"/getSoundboxState An error occurred: {e}")
         return make_response(jsonify({"error": "Internal Server Error"}), 500)
-
     finally:
-        cursor.close()
-        db.close()
-
+        close_db_connection(db, cursor)
 
 @app.route('/getSoundboxBookBy', methods=['GET'])
-def getSoundboxBookBy():
+def get_soundbox_book_by():
     token = request.cookies.get('token')
     if not token:
         return jsonify({"error": "no token"}), 401
 
-    getUsernameState, username, db, cursor = getUsernameFromToken(token)
+    getUsernameState, username, db, cursor = get_username_from_token(token)
     if getUsernameState == 0:
         return make_response(jsonify({"error": "Unauthorized"}), 401)
 
@@ -269,18 +255,16 @@ def getSoundboxBookBy():
     except Exception as e:
         logging.error(f"/getSoundboxBookBy An error occurred: {e}")
         return make_response(jsonify({"error": "Internal Server Error"}), 500)
-
     finally:
-        cursor.close()
-        db.close()
+        close_db_connection(db, cursor)
 
 @app.route('/getBookedSoundbox', methods=['GET'])
-def getBookedSoundbox():
+def get_booked_soundbox():
     token = request.cookies.get('token')
     if not token:
         return jsonify({"error": "no token"}), 401
 
-    getUsernameState, username, db, cursor = getUsernameFromToken(token)
+    getUsernameState, username, db, cursor = get_username_from_token(token)
     if getUsernameState == 0:
         return make_response(jsonify({"error": "Unauthorized"}), 401)
 
@@ -299,12 +283,8 @@ def getBookedSoundbox():
     except Exception as e:
         logging.error(f"/getBookedSoundbox An error occurred: {e}")
         return make_response(jsonify({"error": "Internal Server Error"}), 500)
-
     finally:
-        cursor.close()
-        db.close()
-
-
+        close_db_connection(db, cursor)
 
 @app.route('/book', methods=['POST'])
 def book():
@@ -312,12 +292,11 @@ def book():
     if not token:
         return make_response(jsonify({"error": "no token"}), 401)
 
-    getUsernameState, username, db, cursor = getUsernameFromToken(token)
+    getUsernameState, username, db, cursor = get_username_from_token(token)
     if getUsernameState == 0:
         return make_response(jsonify({"error": "Unauthorized"}), 401)
 
     try:
-
         logging.info(f"/book {username} accessed the route.")
 
         # 获取Query参数并验证
@@ -357,11 +336,8 @@ def book():
     except Exception as e:
         logging.error(f"/book An error occurred: {e}")
         return make_response(jsonify({"error": "Internal Server Error"}), 500)
-
     finally:
-        cursor.close()
-        db.close()
-
+        close_db_connection(db, cursor)
 
 @app.route('/unbook', methods=['POST'])
 def unbook():
@@ -369,12 +345,11 @@ def unbook():
     if not token:
         return make_response(jsonify({"error": "Unauthorized"}), 401)
 
-    getUsernameState, username, db, cursor = getUsernameFromToken(token)
+    getUsernameState, username, db, cursor = get_username_from_token(token)
     if getUsernameState == 0:
         return make_response(jsonify({"error": "Unauthorized"}), 401)
 
     try:
-
         logging.info(f"/unbook {username} accessed the route.")
 
         # 获取Query参数并验证
@@ -414,11 +389,8 @@ def unbook():
     except Exception as e:
         logging.error(f"/book An error occurred: {e}")
         return make_response(jsonify({"error": "Internal Server Error"}), 500)
-
     finally:
-        cursor.close()
-        db.close()
-
+        close_db_connection(db, cursor)
 
 if __name__ == '__main__':
     if input("Enable HTTPS? (Y/N)") == "Y":
