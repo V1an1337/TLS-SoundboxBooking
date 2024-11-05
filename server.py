@@ -1,22 +1,28 @@
 import logging
 import identity
 import identity.web
+import schedule
 from flask import Flask, redirect, render_template, request, session, url_for, jsonify, make_response
 from flask_cors import CORS
 import requests
 from mysql.connector import pooling
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 from flask_session import Session
 import app_config
-from insert_data import InsertData
+from automaticTasks import InsertData, BlockManager
 
 # 设置日志配置
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename="server.log")
 
 app = Flask(__name__)
 app.config.from_object(app_config)
-CORS(app, resources={r'/*': {'origins': ["http://localhost:63342", "https://cloud.v1an.xyz"], "methods": "*"}}, supports_credentials=True)
+
+CORS(app, resources={r'/*': {
+    'origins': ["https://soundbox.v1an.xyz", "https://cloud.v1an.xyz", "http://localhost:63342"],
+    "methods": ["GET", "POST"]
+}}, headers=["Content-Type", "Authorization", "token"], supports_credentials=True)
+
 Session(app)
 
 from werkzeug.middleware.proxy_fix import ProxyFix  # Microsoft登录示例里的依赖
@@ -37,24 +43,30 @@ config = {
     'host': '127.0.0.1',
     'database': 'SoundboxBooking',
 }
-connection_pool = pooling.MySQLConnectionPool(pool_name="mypool", pool_size=5, **config)
+connection_pool = pooling.MySQLConnectionPool(pool_name="mypool", pool_size=10, **config)
 
 insert_data = InsertData()
-insert_data.init()
 insert_data.start()
+
+block_manager = BlockManager()
+block_manager.start()
+
 
 def is_valid_date(date_str):
     """ 验证日期格式 YYYY-MM-DD """
     return bool(re.match(r"^\d{4}\d{2}\d{2}$", date_str))
+
 
 def get_db_cursor():
     db = connection_pool.get_connection()
     cursor = db.cursor()
     return db, cursor
 
+
 def close_db_connection(db, cursor):
     cursor.close()
     db.close()
+
 
 def get_username_from_token(token: str):
     db, cursor = get_db_cursor()
@@ -68,9 +80,10 @@ def get_username_from_token(token: str):
         logging.error(f"Error fetching username from token: {e}")
         return 0, "", db, cursor
 
+
 @app.route("/login")
 def login():
-    token = request.headers.get('token')  # 从 cookie 中获取 token
+    token = request.cookies.get('token') or request.headers.get('token')  # 从 cookie 中获取 token
     if not token:  # token为空
         return render_template("login.html", version=identity.__version__, **auth.log_in(
             scopes=app_config.SCOPE,  # Have user consent to scopes during log-in
@@ -90,6 +103,7 @@ def login():
     # 设置 cookie
     response.set_cookie('token', token, httponly=True, secure=True)  # 确保 cookie 仅在 HTTPS 传输
     return response
+
 
 @app.route(app_config.REDIRECT_PATH)
 def auth_response():
@@ -150,9 +164,11 @@ def auth_response():
     finally:
         close_db_connection(db, cursor)
 
+
 @app.route("/logout")
 def logout():
     return redirect(auth.log_out(url_for("index", _external=True)))
+
 
 @app.route("/")
 def index():
@@ -167,9 +183,11 @@ def index():
     return render_template('index.html', user=auth.get_user(), version=identity.__version__)
     """
 
+
 @app.route('/getSoundboxState', methods=['GET'])
 def get_soundbox_state():
-    token = request.headers.get('token')
+    token = request.cookies.get('token') or request.headers.get('token')
+    print(token)
     if not token:
         return jsonify({"error": "no token"}), 401
 
@@ -181,7 +199,7 @@ def get_soundbox_state():
         logging.info(f"/getSoundboxState {username} accessed the route.")
 
         # 获取Query参数并验证
-        date = request.args.get('date')
+        date = request.args.get('startDate') or request.args.get('date')
 
         if date and not is_valid_date(date):
             logging.info(f"/getSoundboxState Invalid date format from user {username}")
@@ -193,10 +211,12 @@ def get_soundbox_state():
                 (date,))
         else:
             today = datetime.now().date()
+            print(today)
             cursor.execute("SELECT id, block FROM Booking WHERE date = %s AND status = 1",
                            (today,))
 
         results = cursor.fetchall()
+        print(results)
         formatted_results = [(id, block) for (id, block) in results]
 
         # 记录返回结果
@@ -209,9 +229,10 @@ def get_soundbox_state():
     finally:
         close_db_connection(db, cursor)
 
+
 @app.route('/getSoundboxBookBy', methods=['GET'])
 def get_soundbox_book_by():
-    token = request.headers.get('token')
+    token = request.cookies.get('token') or request.headers.get('token')
     if not token:
         return jsonify({"error": "no token"}), 401
 
@@ -258,9 +279,10 @@ def get_soundbox_book_by():
     finally:
         close_db_connection(db, cursor)
 
+
 @app.route('/getBookedSoundbox', methods=['GET'])
 def get_booked_soundbox():
-    token = request.headers.get('token')
+    token = request.cookies.get('token') or request.headers.get('token')
     if not token:
         return jsonify({"error": "no token"}), 401
 
@@ -270,6 +292,7 @@ def get_booked_soundbox():
 
     try:
         logging.info(f"/getBookedSoundbox {username} accessed the route.")
+
         cursor.execute("SELECT id,date,block FROM Booking WHERE bookBy = %s", (username,))
         results = cursor.fetchall()
 
@@ -286,9 +309,10 @@ def get_booked_soundbox():
     finally:
         close_db_connection(db, cursor)
 
+
 @app.route('/book', methods=['POST'])
 def book():
-    token = request.headers.get('token')
+    token = request.cookies.get('token') or request.headers.get('token')
     if not token:
         return make_response(jsonify({"error": "no token"}), 401)
 
@@ -311,6 +335,42 @@ def book():
             logging.info(f"/book Attempt to book by {username} failed: Missing or wrong id/date/block.")
             return make_response(jsonify({"error": "Missing or wrong id/date/block"}), 400)
 
+        block = int(block)
+
+        # 不能预定之前的静音仓
+        if booking_date < datetime.now().strftime('%Y%m%d'):
+            logging.info(f"/book Attempt to book by {username} failed: Can't book previous dates.")
+            return make_response(jsonify({"error": "Can't book previous dates"}), 400)
+
+        # 不能预定后天以及以后的静音仓
+        if booking_date > (datetime.now() + timedelta(days=1)).strftime('%Y%m%d'):
+            logging.info(f"/book Attempt to book by {username} failed: Can't book in advance.")
+            return make_response(jsonify({"error": "Can't book in advance"}), 400)
+
+        # 不能预定今天的之前的block，明天的不受block限制
+        if booking_date == datetime.now().strftime('%Y%m%d') and block < block_manager.block:
+            logging.info(f"/book Attempt to book by {username} failed: Can't block previous blocks.")
+            return make_response(jsonify({"error": "Can't book previous blocks"}), 400)
+
+        # 检测是否达到预定限制（预定限制：当前Block以及往后只能book 三个静音仓）
+        cursor.execute("SELECT id, block FROM Booking WHERE date = %s AND bookBy = %s", (booking_date, username))
+        user_bookings = cursor.fetchall()
+        legal_bookings = []
+        count = 0
+        if booking_date == datetime.now().strftime('%Y%m%d'):  # 预定今天
+            for booking in user_bookings:
+                if int(booking[1]) >= block_manager.block:  # 如果大于当前block的预定静音仓数量大于3
+                    legal_bookings.append(booking)
+                    count += 1
+        else:  # 预定明天或之后
+            count = len(user_bookings)
+        logging.info(f"/book Attempt to book by {username}: {count} bookings found:{legal_bookings}")
+
+        if count >= 3:
+            logging.info(f"/book Attempt to book by {username} failed: Reached booking limit.")
+            return make_response(jsonify({"error": "Reached booking limit"}), 400)
+
+        # 检查是否可被预定
         cursor.execute("SELECT * FROM Booking WHERE id = %s AND date = %s AND block = %s",
                        (booking_id, booking_date, block))
         booking = cursor.fetchone()
@@ -339,9 +399,10 @@ def book():
     finally:
         close_db_connection(db, cursor)
 
+
 @app.route('/unbook', methods=['POST'])
 def unbook():
-    token = request.headers.get('token')
+    token = request.cookies.get('token') or request.headers.get('token')
     if not token:
         return make_response(jsonify({"error": "Unauthorized"}), 401)
 
@@ -357,19 +418,31 @@ def unbook():
         booking_date = request.args.get('date')
         block = request.args.get('block')
 
+
         if not (booking_id and booking_date and block):
-            logging.info(f"/book Attempt to book by {username} failed: Missing or wrong id/date/block.")
+            logging.info(f"/unbook Attempt to unbook by {username} failed: Missing or wrong id/date/block.")
             return make_response(jsonify({"error": "Missing or wrong id/date/block"}), 400)
         if not (booking_id.isdigit() and block.isdigit() and is_valid_date(booking_date)):
-            logging.info(f"/book Attempt to book by {username} failed: Missing or wrong id/date/block.")
+            logging.info(f"/unbook Attempt to unbook by {username} failed: Missing or wrong id/date/block.")
             return make_response(jsonify({"error": "Missing or wrong id/date/block"}), 400)
+
+        block = int(block)
+        # 不能unbook之前的静音仓
+        if booking_date < datetime.now().strftime('%Y%m%d'):
+            logging.info(f"/unbook Attempt to unbook by {username} failed: Can't unbook previous dates.")
+            return make_response(jsonify({"error": "Can't unbook previous dates"}), 400)
+
+        # 不能取消今天的之前的block，明天的不受block限制
+        if booking_date == datetime.now().strftime('%Y%m%d') and block <= block_manager.block:
+            logging.info(f"/unbook Attempt to unbook by {username} failed: Can't unbook previous blocks.")
+            return make_response(jsonify({"error": "Can't unbook previous blocks"}), 400)
 
         cursor.execute("SELECT * FROM Booking WHERE id = %s AND date = %s AND block = %s",
                        (booking_id, booking_date, block))
         booking = cursor.fetchone()
 
         if not booking:
-            logging.info(f"/book Attempt to book by {username} failed: Soundbox not found.")
+            logging.info(f"/unbook Attempt to unbook by {username} failed: Soundbox not found.")
             return make_response(jsonify({"error": "Soundbox not found"}), 404)
 
         booking_status, booking_by = booking[3], booking[4]  # 假设 status 在 Booking 表中的位置为 3
@@ -387,10 +460,11 @@ def unbook():
         return jsonify({"status": True}), 200
 
     except Exception as e:
-        logging.error(f"/book An error occurred: {e}")
+        logging.error(f"/unbook An error occurred: {e}")
         return make_response(jsonify({"error": "Internal Server Error"}), 500)
     finally:
         close_db_connection(db, cursor)
+
 
 if __name__ == '__main__':
     if input("Enable HTTPS? (Y/N)") == "Y":
