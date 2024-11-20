@@ -43,7 +43,7 @@ config = {
     'host': '127.0.0.1',
     'database': 'SoundboxBooking',
 }
-connection_pool = pooling.MySQLConnectionPool(pool_name="mypool", pool_size=10, **config)
+connection_pool = pooling.MySQLConnectionPool(pool_name="mypool", pool_size=32, **config)
 
 insert_data = InsertData()
 insert_data.start()
@@ -80,6 +80,7 @@ def get_username_from_token(token: str):
         logging.error(f"Error fetching username from token: {e}")
         return 0, "", db, cursor
 
+from flask import redirect
 
 @app.route("/login")
 def login():
@@ -97,12 +98,14 @@ def login():
             redirect_uri=url_for("auth_response", _external=True),
         ))
 
+    # 设置 cookie
     response = jsonify({"status": True})  # token匹配
     response.status_code = 200
-
-    # 设置 cookie
     response.set_cookie('token', token, httponly=True, secure=True)  # 确保 cookie 仅在 HTTPS 传输
-    return response
+
+    # 增加重定向到指定 URL
+    return redirect("https://cloud.v1an.xyz/soundboxBooking.html")
+
 
 
 @app.route(app_config.REDIRECT_PATH)
@@ -156,7 +159,7 @@ def auth_response():
         # 设置cookie以便用户下次自动认证
         response = jsonify({"status": True, "token": new_token})
         response.set_cookie('token', new_token, httponly=True, secure=True)  # 使用secure和httponly选项确保cookie安全
-        return response, 200
+        return redirect("https://cloud.v1an.xyz/soundboxBooking.html")
 
     except Exception as e:
         logging.error(f"/getAToken-UpdateUser/Token An error occurred: {e}")
@@ -417,7 +420,6 @@ def unbook():
         booking_id = request.args.get('id')
         booking_date = request.args.get('date')
         block = request.args.get('block')
-
 
         if not (booking_id and booking_date and block):
             logging.info(f"/unbook Attempt to unbook by {username} failed: Missing or wrong id/date/block.")
