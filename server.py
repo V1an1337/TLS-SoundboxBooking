@@ -299,7 +299,7 @@ def get_booked_soundbox():
         cursor.execute("SELECT id,date,block FROM Booking WHERE bookBy = %s", (username,))
         results = cursor.fetchall()
 
-        formatted_results = [(id, block, date.strftime('%Y%m%d')) for (id, block, date) in results]
+        formatted_results = [(id, block, date.strftime('%Y%m%d')) for (id, date, block) in results]
 
         # 记录返回结果
         logging.info(
