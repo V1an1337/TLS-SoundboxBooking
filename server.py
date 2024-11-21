@@ -99,12 +99,11 @@ def login():
         ))
 
     # 设置 cookie
-    response = jsonify({"status": True})  # token匹配
-    response.status_code = 200
+    response = redirect("https://cloud.v1an.xyz/soundboxBooking.html")  # token匹配
     response.set_cookie('token', token, httponly=True, secure=True)  # 确保 cookie 仅在 HTTPS 传输
 
     # 增加重定向到指定 URL
-    return redirect("https://cloud.v1an.xyz/soundboxBooking.html")
+    return response
 
 
 
@@ -156,16 +155,17 @@ def auth_response():
 
         db.commit()
 
-        # 设置cookie以便用户下次自动认证
-        response = jsonify({"status": True, "token": new_token})
+        # 创建重定向响应并设置Cookie
+        response = redirect("https://cloud.v1an.xyz/soundboxBooking.html")
         response.set_cookie('token', new_token, httponly=True, secure=True)  # 使用secure和httponly选项确保cookie安全
-        return redirect("https://cloud.v1an.xyz/soundboxBooking.html")
+        return response
 
     except Exception as e:
         logging.error(f"/getAToken-UpdateUser/Token An error occurred: {e}")
         return make_response(jsonify({"error": "Internal Server Error"}), 500)
     finally:
         close_db_connection(db, cursor)
+
 
 
 @app.route("/logout")
@@ -299,7 +299,7 @@ def get_booked_soundbox():
         cursor.execute("SELECT id,date,block FROM Booking WHERE bookBy = %s", (username,))
         results = cursor.fetchall()
 
-        formatted_results = [(id, date.strftime('%Y%m%d'), block) for (id, date, block) in results]
+        formatted_results = [(id, block, date.strftime('%Y%m%d')) for (id, block, date) in results]
 
         # 记录返回结果
         logging.info(
