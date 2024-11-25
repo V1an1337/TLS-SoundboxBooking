@@ -82,8 +82,8 @@ class InsertData:
 
 class BlockManager:
     def __init__(self):
-        # Block 开始时间分别为 8:00, 8:50, 10:10, 11:00, 11:50, 13:25, 14:15, 15:00, 16:00, 16:50
-        self.timePeriod = ["8:00", "8:50", "10:10", "11:00", "11:50", "13:25", "14:15", "15:00", "15:55", "16:50",
+        # Block 开始时间
+        self.timePeriod = ["8:00", "8:40", "9:20", "10:50", "11:40", "12:30", "14:05", "14:55", "15:40", "16:45",
                            "17:40"]  # 17:40 为B10结束时间，此时应重置为Block1，不然不能预定明天的静音仓
         # format timePeriod
         self.timePeriod = [datetime.strptime(time, '%H:%M').strftime('%H:%M') for time in self.timePeriod]
