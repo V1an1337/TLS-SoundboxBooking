@@ -296,9 +296,16 @@ def get_booked_soundbox():
     try:
         logging.info(f"/getBookedSoundbox {username} accessed the route.")
 
-        cursor.execute("SELECT id,date,block FROM Booking WHERE bookBy = %s", (username,))
-        results = cursor.fetchall()
+        today_date = datetime.now().strftime('%Y%m%d')
+        tomorrow_date = (datetime.now() + timedelta(days=1)).strftime('%Y%m%d')
 
+        # 查询当天到次日的记录
+        cursor.execute("""
+            SELECT id, date, block FROM Booking 
+            WHERE bookBy = %s AND date BETWEEN %s AND %s
+        """, (username, today_date, tomorrow_date))
+
+        results = cursor.fetchall()
         formatted_results = [(id, block, date.strftime('%Y%m%d')) for (id, date, block) in results]
 
         # 记录返回结果
