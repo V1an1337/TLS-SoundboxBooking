@@ -43,7 +43,8 @@ config = {
     'host': '127.0.0.1',
     'database': 'SoundboxBooking',
 }
-connection_pool = pooling.MySQLConnectionPool(pool_name="mypool", pool_size=32, **config)
+connection_pool = pooling.MySQLConnectionPool(pool_size=32, pool_reset_session=True, **config)
+active_db_connections = 0
 
 insert_data = InsertData()
 insert_data.start()
@@ -58,12 +59,18 @@ def is_valid_date(date_str):
 
 
 def get_db_cursor():
+    global active_db_connections
+    active_db_connections += 1
+    #print(f"active_db_connections: {active_db_connections}")
     db = connection_pool.get_connection()
     cursor = db.cursor()
     return db, cursor
 
 
 def close_db_connection(db, cursor):
+    global active_db_connections
+    active_db_connections -= 1
+    #print(f"active_db_connections: {active_db_connections}")
     cursor.close()
     db.close()
 
@@ -97,6 +104,7 @@ def login():
             scopes=app_config.SCOPE,  # Have user consent to scopes during log-in
             redirect_uri=url_for("auth_response", _external=True),
         ))
+    close_db_connection(db, cursor)
 
     # 设置 cookie
     response = redirect("https://cloud.v1an.xyz/soundboxBooking.html")  # token匹配
