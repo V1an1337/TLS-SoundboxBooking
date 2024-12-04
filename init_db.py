@@ -19,12 +19,14 @@ try:
 
     # 删除User表（如果存在），然后创建User表
     cursor.execute("DROP TABLE IF EXISTS User")
-    cursor.execute(""" 
+    cursor.execute("""
     CREATE TABLE User (
         id INT AUTO_INCREMENT PRIMARY KEY,
         username VARCHAR(8) NOT NULL,
         token VARCHAR(128) DEFAULT NULL,
-        mailAddress VARCHAR(64) NOT NULL
+        mailAddress VARCHAR(64) NOT NULL,
+        name VARCHAR(64) DEFAULT NULL,
+        status VARCHAR(16) DEFAULT 'user'
     )
     """)
 

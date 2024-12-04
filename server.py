@@ -87,6 +87,21 @@ def get_username_from_token(token: str):
         logging.error(f"Error fetching username from token: {e}")
         return 0, "", db, cursor
 
+def get_displayedName_and_status_from_token(token: str):
+    db, cursor = get_db_cursor()
+    try:
+        cursor.execute("SELECT name, status FROM User WHERE token = %s", (token,))
+        user = cursor.fetchone()
+        print(user)
+        if user is None:
+            return 0, None, None
+        return 1, user[0], user[1]
+    except Exception as e:
+        logging.error(f"Error fetching displayedName from token: {e}")
+        return 0, None, None
+    finally:
+        close_db_connection(db, cursor)
+
 from flask import redirect
 
 @app.route("/login")
@@ -138,7 +153,6 @@ def auth_response():
         validMail = str(mailAddress).split("@")
         if not (len(validMail) == 2 and validMail[1].lower() == "tsinglan.org"):  # valid mailAddress
             return jsonify({"error": "Unauthorized"}), 401
-
         username = str(api_result['jobTitle'])[1:]  # T20271064把T去掉
         new_token = token["access_token"][:128]
 
@@ -154,9 +168,11 @@ def auth_response():
         user = cursor.fetchone()
 
         if user is None:  # 新用户注册
+            status = "user"
+            name = api_result['displayName']
             logging.info(f"/getAToken-UpdateUser/Token user {username} with mail {mailAddress} registered!")
-            insert_query = "INSERT INTO User (username, mailAddress, token) VALUES (%s, %s, %s)"
-            cursor.execute(insert_query, (username, mailAddress, new_token))
+            insert_query = "INSERT INTO User (username, mailAddress, token, name, status) VALUES (%s, %s, %s, %s, %s)"
+            cursor.execute(insert_query, (username, mailAddress, new_token, name, status))
         else:  # 更新token
             logging.info(f"/getAToken-UpdateUser/Token user {username} renewed token!")
             cursor.execute("UPDATE User SET token = %s WHERE mailAddress = %s", (new_token, mailAddress))
@@ -193,6 +209,18 @@ def index():
         return redirect(url_for("login"))
     return render_template('index.html', user=auth.get_user(), version=identity.__version__)
     """
+
+@app.route('/getUserInfo', methods=['GET'])
+def get_user_info():
+    token = request.cookies.get('token') or request.headers.get('token')
+    print(token)
+    if not token:
+        return jsonify({"error": "no token"}), 401
+
+    getInfoState, displayedName, status = get_displayedName_and_status_from_token(token)
+    if getInfoState == 0:
+        return make_response(jsonify({"error": "Unauthorized"}), 401)
+    return jsonify({"name": displayedName, "status": status})
 
 
 @app.route('/getSoundboxState', methods=['GET'])
