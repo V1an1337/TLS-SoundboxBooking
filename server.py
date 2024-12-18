@@ -61,7 +61,7 @@ def is_valid_date(date_str):
 def get_db_cursor():
     global active_db_connections
     active_db_connections += 1
-    #print(f"active_db_connections: {active_db_connections}")
+    print(f"active_db_connections: {active_db_connections}")
     db = connection_pool.get_connection()
     cursor = db.cursor()
     return db, cursor
@@ -70,7 +70,7 @@ def get_db_cursor():
 def close_db_connection(db, cursor):
     global active_db_connections
     active_db_connections -= 1
-    #print(f"active_db_connections: {active_db_connections}")
+    print(f"active_db_connections: {active_db_connections}")
     cursor.close()
     db.close()
 
@@ -87,6 +87,7 @@ def get_username_from_token(token: str):
         logging.error(f"Error fetching username from token: {e}")
         return 0, "", db, cursor
 
+
 def get_displayedName_and_status_from_token(token: str):
     db, cursor = get_db_cursor()
     try:
@@ -102,7 +103,9 @@ def get_displayedName_and_status_from_token(token: str):
     finally:
         close_db_connection(db, cursor)
 
+
 from flask import redirect
+
 
 @app.route("/login")
 def login():
@@ -127,7 +130,6 @@ def login():
 
     # 增加重定向到指定 URL
     return response
-
 
 
 @app.route(app_config.REDIRECT_PATH)
@@ -191,7 +193,6 @@ def auth_response():
         close_db_connection(db, cursor)
 
 
-
 @app.route("/logout")
 def logout():
     return redirect(auth.log_out(url_for("index", _external=True)))
@@ -209,6 +210,7 @@ def index():
         return redirect(url_for("login"))
     return render_template('index.html', user=auth.get_user(), version=identity.__version__)
     """
+
 
 @app.route('/getUserInfo', methods=['GET'])
 def get_user_info():
@@ -388,8 +390,8 @@ def book():
             logging.info(f"/book Attempt to book by {username} failed: Can't book previous dates.")
             return make_response(jsonify({"error": "Can't book previous dates"}), 400)
 
-        # 不能预定后天以及以后的静音仓
-        if booking_date > (datetime.now() + timedelta(days=1)).strftime('%Y%m%d'):
+        # 只能预定今天以及往后三天的静音仓
+        if booking_date > (datetime.now() + timedelta(days=3)).strftime('%Y%m%d'):
             logging.info(f"/book Attempt to book by {username} failed: Can't book in advance.")
             return make_response(jsonify({"error": "Can't book in advance"}), 400)
 
