@@ -18,25 +18,25 @@ class InsertData:
     def __init__(self):
         self.init()
 
-    # 插入未来工作日（周一到周五）数据
+    # 插入一周的数据
     def insert_weekday_data(self):
         with mysql.connector.connect(**config) as conn:
             with conn.cursor() as cursor:
                 error_count = 0
                 for i in range(7):
                     date = datetime.now().date() + timedelta(days=i)
-                    if date.weekday() < 5:  # 只插入周一到周五的数据
-                        for id in range(1, 61):
-                            for block in range(1, 11):
-                                insert_sql = """
-                                            INSERT INTO Booking (id, date, block, status, bookBy) 
-                                            VALUES (%s, %s, %s, %s, %s)
-                                            """
-                                values = (id, date, block, False, None)
-                                try:
-                                    cursor.execute(insert_sql, values)
-                                except mysql.connector.IntegrityError:
-                                    error_count += 1
+                    # if date.weekday() < 5:  # 只插入周一到周五的数据
+                    for id in range(1, 61):
+                        for block in range(1, 11):
+                            insert_sql = """
+                                        INSERT INTO Booking (id, date, block, status, bookBy) 
+                                        VALUES (%s, %s, %s, %s, %s)
+                                        """
+                            values = (id, date, block, False, None)
+                            try:
+                                cursor.execute(insert_sql, values)
+                            except mysql.connector.IntegrityError:
+                                error_count += 1
                 logging.info(f"error_count = {error_count}")
 
             conn.commit()
