@@ -335,9 +335,9 @@ def get_booked_soundbox():
         logging.info(f"/getBookedSoundbox {username} accessed the route.")
 
         today_date = datetime.now().strftime('%Y%m%d')
-        tomorrow_date = (datetime.now() + timedelta(days=1)).strftime('%Y%m%d')
+        tomorrow_date = (datetime.now() + timedelta(days=3)).strftime('%Y%m%d')
 
-        # 查询当天到次日的记录
+        # 查询当天到后三天的记录
         cursor.execute("""
             SELECT id, date, block FROM Booking 
             WHERE bookBy = %s AND date BETWEEN %s AND %s
